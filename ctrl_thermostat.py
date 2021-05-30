@@ -1,15 +1,15 @@
+import time
+
+import nvs
+import unit
+import wifiCfg
+from easyIO import *
+from esp import dht_readinto
+from m5mqtt import M5mqtt
 from m5stack import *
+from m5stack import touch
 from m5stack_ui import *
 from uiflow import *
-import wifiCfg
-import nvs
-from m5mqtt import M5mqtt
-import time
-from m5stack import touch
-from easyIO import *
-import unit
-from machine import Pin
-from esp import dht_readinto
 
 screen = M5Screen()
 screen.clean_screen()
@@ -78,17 +78,23 @@ buf = bytearray(5)
 
 
 def humidity():
-    dht_readinto(DHT_PIN, buf)
-    return (buf[0] << 8 | buf[1]) * 0.1
+    try:
+        dht_readinto(DHT_PIN, buf)
+        return (buf[0] << 8 | buf[1]) * 0.1
+    except:
+        return None
 
 
 def temperature():
-    dht_readinto(DHT_PIN, buf)
-    t = ((buf[2] & 0x7F) << 8 | buf[3]) * 0.1
-    if buf[2] & 0x80:
-        t = -t
-    # print ('temp: ', t)
-    return t
+    try:
+        dht_readinto(DHT_PIN, buf)
+        t = ((buf[2] & 0x7F) << 8 | buf[3]) * 0.1
+        if buf[2] & 0x80:
+            t = -t
+        # print ('temp: ', t)
+        return t
+    except:
+        return None
 
 
 # Describe this function...
@@ -115,7 +121,7 @@ def init():
     curr_hrmin = 0
     timeout_screen = 120000
     curr_temp = temperature()
-    t.set_text(str(str(cmd_temp)))
+    t.set_text(str(curr_temp))
     mode_label.set_hidden(True)
     show_plus_minus(False)
     set_AUTO()
