@@ -65,6 +65,7 @@ from m5stack import touch
 from m5stack_ui import *
 from uiflow import *
 
+
 screen = M5Screen()
 screen.clean_screen()
 screen.set_screen_bg_color(0xf9f5f5)
@@ -128,6 +129,10 @@ start_lbl = M5Label('0630', x=25, y=102, color=0x000, font=FONT_MONT_14, parent=
 end_lbl = M5Label('2230', x=123, y=102, color=0x000, font=FONT_MONT_14, parent=None)
 
 from numbers import Number
+
+wifiCfg.doConnect('WiFi-2.4-CC88', (nvs.read_str('wifi_pwd')))
+rtc.settime('ntp', host='de.pool.ntp.org', tzone=2)
+
 
 # Connect to DHT22 temperature /  humidity sensor
 DHT_PIN = 33
@@ -441,19 +446,19 @@ btnC.wasPressed(buttonC_wasPressed)
 # Call back function for the subscription to mqtt topic thermostat/weekSchedule
 def cb_schedule(topic_data):
     global week_schedule
+    print('Got new schedule!')
     week_schedule = json.loads(topic_data)
+    with open('weekSchedule.json', 'w') as fd:
+      fd.write(topic_data)
 
 
 # Start the main program
 
 # All initiatilizations
 init()
-wifiCfg.doConnect('WiFi-2.4-CC88', (nvs.read_str('wifi_pwd')))
-m5mqtt = M5mqtt('Thermostat', '192.168.0.22', 1883, 'IoT', (nvs.read_str('mqtt_pwd')), 300)
+m5mqtt = M5mqtt('Thermostat', '192.168.0.17', 1884, 'IoT', (nvs.read_str('mqtt_pwd')), 300)
 m5mqtt.subscribe(str('thermostat/weekSchedule'), cb_schedule)
 m5mqtt.start()
-rtc.settime('ntp', host='de.pool.ntp.org', tzone=2)
-
 
 # always loop
 while True:
@@ -462,23 +467,33 @@ while True:
         try:
             rtc.settime('ntp', host='de.pool.ntp.org', tzone=2)
         except:
-            wifiCfg.reconnect()
+            wifiCfg.doConnect('WiFi-2.4-CC88', (nvs.read_str('wifi_pwd')))
+            rtc.settime('ntp', host='de.pool.ntp.org', tzone=2)
 
         if mode != 'OFF':
             mode = 'AUTO'
+
+        try:
+          with open('weekSchedule.json', 'r') as fd:
+              week_schedule = json.loads(fd.read())
+        except:
+          pass
 
         prev_weekday = rtc.datetime()[3]
 
     # publish the temperature every 5 min
     if (time.ticks_ms()) > prev_time_publish + 300000:
-        try:
-            m5mqtt.publish(str('thermostat/temperature'),str(curr_temp))
-        except:
-            wifiCfg.reconnect()
-            m5mqtt = M5mqtt('Thermostat', '192.168.0.22', 1883, 'IoT', (nvs.read_str('mqtt_pwd')), 300)
-            m5mqtt.start()
-            m5mqtt.publish(str('thermostat/temperature'), str(curr_temp))
         prev_time_publish = time.ticks_ms()
+        try:
+          m5mqtt.publish(str('thermostat/temperature'), str(curr_temp))
+          print ('Temp is ' + str(curr_temp) + 'C')
+        except:
+          wifiCfg.doConnect('WiFi-2.4-CC88', (nvs.read_str('wifi_pwd')))
+          m5mqtt = M5mqtt('Thermostat', '192.168.0.17', 1884, 'IoT', (nvs.read_str('mqtt_pwd')), 300)
+          m5mqtt.start()
+          m5mqtt.publish(str('thermostat/temperature'), str(curr_temp))
+          print ('cannot publish!')
+
 
     # Adjust displayed time each second
     if (time.ticks_ms()) > prev_time_clock + 1000:
