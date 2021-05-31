@@ -27,12 +27,16 @@ Function:
                 - AUTO: the temperature is regulated according to week schedule
                 - DAY: the temperature is regulated to the day reference temperature until the next day
                 - NIGHT: the temperature is regulated to the night reference temperature until the next day
+            - A touch on the middle of the display toggle the screen brightness between 15% and 100%.
+              the screen is always dimmed to 15% after 30 sec.
 
 Diplay Screen:
 
             - Upper section shows:
-                - a thermometer icon, followed by the acual measured temperature and followed by the thermostat mode
-                - a small red dot under the thermometer icon indicates the relay is actually closed
+                - a thermometer icon, followed by the acual measured temperature and followed by the thermostat mode switch
+                - the switch allows to move between automatic mode, or forced day or night regulated temperature
+                - above the switch, the charge of the internal M5Stack battery is shown, in case of deconnection from its main supply
+                - a small red dot under the thermometer icon indicates that the relay is actually closed
                 - the full date / time is display and refresh every second.
 
             - the middle section shows:
@@ -44,7 +48,7 @@ Diplay Screen:
                 - three yellow buttons:
                     - "day": edit the day reference temperature
                     - "night": edit the night reference temperature
-                    - mode: OFF -> ON -> AUTO -> DAY -> NIGHT mode switch
+                    - mode: OFF -> ON -> AUTO mode switch
                 - in edit mode:
                     - plus / minus / OK buttons
 
