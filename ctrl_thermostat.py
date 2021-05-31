@@ -16,6 +16,7 @@ screen.clean_screen()
 screen.set_screen_bg_color(0xf9f5f5)
 relay0 = unit.get(unit.RELAY, unit.PORTA)
 
+# Default global variable initialisation
 on = None
 cmd_temp = None
 week_schedule = None
@@ -35,6 +36,7 @@ curr_period = None
 timeout_on = None
 prev_weekday = None
 prev_time_clock = None
+prev_time_publish = None
 prev_time_regu = None
 prev_time_on = None
 X = None
@@ -42,7 +44,7 @@ prev_time_screen = None
 Y = None
 timeout_screen = None
 
-wifiCfg.doConnect('WiFi-2.4-CC88', (nvs.read_str('wifi_pwd')))
+# Load UI screen
 moon = M5Img("res/moon.png", x=163, y=87, parent=None)
 sun = M5Img("res/sun.png", x=45, y=80, parent=None)
 line0 = M5Line(x1=0, y1=80, x2=320, y2=80, color=0x0000ff, width=3, parent=None)
@@ -73,6 +75,7 @@ end_lbl = M5Label('2230', x=123, y=102, color=0x000, font=FONT_MONT_14, parent=N
 
 from numbers import Number
 
+# Connect to DHT22 temperature /  humidity sensor
 DHT_PIN = 33
 buf = bytearray(5)
 
@@ -97,13 +100,17 @@ def temperature():
         return None
 
 
-# Describe this function...
+# Global variable initialization with default values
 def init():
-    global on, cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip, curr_day_schedule, curr_hrmin, curr_temp, prev_time_exit, curr_period, timeout_on, prev_weekday, prev_time_clock, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
+    global on, cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip
+    global curr_day_schedule, curr_hrmin, curr_temp, prev_time_exit, curr_period, timeout_on, prev_weekday
+    global prev_time_clock, prev_time_publish, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
+
     week_schedule = [[{'start': '0630', 'end': '2330'}], [{'start': '0631', 'end': '2330'}],
                      [{'start': '0632', 'end': '2200'}], [{'start': '0633', 'end': '2330'}],
                      [{'start': '0635', 'end': '0853'}, {'start': '0855', 'end': '2330'}],
                      [{'start': '0636', 'end': '2330'}], [{'start': '0637', 'end': '2330'}]]
+
     brightness_flip = False
     day_temp = 20
     night_temp = 14
@@ -114,6 +121,7 @@ def init():
     prev_time_clock = time.ticks_ms()
     prev_time_regu = time.ticks_ms()
     prev_time_exit = time.ticks_ms()
+    prev_time_publish = time.ticks_ms()
     prev_time_screen = 0
     prev_time_on = 0
     prev_weekday = -1
@@ -127,32 +135,39 @@ def init():
     set_AUTO()
 
 
-# Describe this function...
+# Use the week schedule object to know what is the current temperature command for the thermostat
 def set_cmd_temp_auto():
-    global on, cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip, curr_day_schedule, curr_hrmin, curr_temp, prev_time_exit, curr_period, timeout_on, prev_weekday, prev_time_clock, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
+    global on, cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip
+    global curr_day_schedule, curr_hrmin, curr_temp, prev_time_exit, curr_period, timeout_on, prev_weekday
+    global prev_time_clock, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
     d = (rtc.datetime()[3]) + 1
     curr_day_schedule = week_schedule[int(d - 1)]
     curr_hrmin = (rtc.datetime()[5]) + (rtc.datetime()[4]) * 100
+
     for curr_period in curr_day_schedule:
-        if curr_hrmin >= int((curr_period['start'])) and curr_hrmin < int((curr_period['end'])):
+        if int((curr_period['start'])) <= curr_hrmin < int((curr_period['end'])):
             temp = day_temp
             start_lbl.set_text(str(curr_period['start']))
             end_lbl.set_text(str(curr_period['end']))
             state.set_on()
             auto_txt.set_pos(226, 34)
             break
+
     if temp != day_temp:
         temp = night_temp
         start_lbl.set_text(' ')
         end_lbl.set_text(' ')
         auto_txt.set_pos(272, 34)
         state.set_off()
+
     return temp
 
 
-# Describe this function...
+# Force the thermostat to stay on regulated DAY mode (until next day)
 def DAY():
-    global on, cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip, curr_day_schedule, curr_hrmin, curr_temp, prev_time_exit, curr_period, timeout_on, prev_weekday, prev_time_clock, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
+    global on, cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip, \
+        curr_day_schedule, curr_hrmin, curr_temp, prev_time_exit, curr_period, timeout_on, prev_weekday, \
+        prev_time_clock, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
     mode = 'DAY'
     mode_label.set_hidden(True)
     state.set_hidden(False)
@@ -162,7 +177,7 @@ def DAY():
     auto_txt.set_hidden(True)
 
 
-# Describe this function...
+# # Force the thermostat to stay on NIGHT regulated mode (until next day)
 def NIGHT():
     global on, cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip, curr_day_schedule, curr_hrmin, curr_temp, prev_time_exit, curr_period, timeout_on, prev_weekday, prev_time_clock, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
     mode = 'NIGHT'
@@ -174,9 +189,11 @@ def NIGHT():
     auto_txt.set_hidden(True)
 
 
-# Describe this function...
+# Force th thermostat to be always ON for the next 5 minutes
 def set_ON():
-    global on, cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip, curr_day_schedule, curr_hrmin, curr_temp, prev_time_exit, curr_period, timeout_on, prev_weekday, prev_time_clock, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
+    global on, cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip, \
+        urr_day_schedule, curr_hrmin, curr_temp, prev_time_exit, curr_period, timeout_on, prev_weekday, prev_time_clock,\
+        prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
     mode = 'ON'
     mode_label.set_hidden(False)
     mode_label.set_text_color(0x006600)
@@ -190,7 +207,7 @@ def set_ON():
     timeout_on = 60000
 
 
-# Describe this function...
+# Switch off the thermostat function
 def set_OFF():
     global on, cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip, curr_day_schedule, curr_hrmin, curr_temp, prev_time_exit, curr_period, timeout_on, prev_weekday, prev_time_clock, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
     mode = 'OFF'
@@ -205,7 +222,7 @@ def set_OFF():
     timeout_on = 0
 
 
-# Describe this function...
+# set the thermostat in automatic & regulated more, according to week schedule
 def set_AUTO():
     global on, cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip, curr_day_schedule, curr_hrmin, curr_temp, prev_time_exit, curr_period, timeout_on, prev_weekday, prev_time_clock, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
     mode = 'AUTO'
@@ -217,7 +234,7 @@ def set_AUTO():
     auto_txt.set_hidden(False)
 
 
-# Describe this function...
+# Show the day/night temperture edit button
 def show_plus_minus(on):
     global cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip, curr_day_schedule, curr_hrmin, curr_temp, prev_time_exit, curr_period, timeout_on, prev_weekday, prev_time_clock, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
     if on:
@@ -230,7 +247,7 @@ def show_plus_minus(on):
         OK.set_hidden(True)
 
 
-# Describe this function...
+# Hide the day/night temperture edit button
 def hide_edit_button():
     global on, cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip, curr_day_schedule, curr_hrmin, curr_temp, prev_time_exit, curr_period, timeout_on, prev_weekday, prev_time_clock, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
     edit_night = False
@@ -238,9 +255,12 @@ def hide_edit_button():
     show_plus_minus(False)
 
 
-# Describe this function...
+# Regulate the temperature around the command +/- 1°c
 def regu():
-    global on, cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip, curr_day_schedule, curr_hrmin, curr_temp, prev_time_exit, curr_period, timeout_on, prev_weekday, prev_time_clock, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
+    global on, cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip, \
+        curr_day_schedule, curr_hrmin, curr_temp, prev_time_exit, curr_period, timeout_on, prev_weekday, \
+        prev_time_clock, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
+
     if curr_temp > float(cmd_temp) + 0.5:
         relay0.off()
         relay_btn.set_hidden(True)
@@ -251,6 +271,7 @@ def regu():
         else:
             pass
 
+# Assign the different buttons of the UI
 
 def state_off():
     global cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip, curr_day_schedule, on, curr_hrmin, curr_temp, prev_time_exit, timeout_on, prev_weekday, prev_time_clock, curr_period, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
@@ -363,18 +384,54 @@ def buttonC_wasPressed():
 
 btnC.wasPressed(buttonC_wasPressed)
 
-init()
-m5mqtt = M5mqtt('Thermostat', '192.168.0.22', 1883, 'IoT', (nvs.read_str('mqtt_pwd')), 300)
+# Call back function for the subscription to mqtt topic thermostat/weekSchedule
+def cb_schedule(topic_data):
+    global week_schedule
+    week_schedule = json.loads(topic_data)
 
+
+# Start the main program
+
+# All initiatilizations
+init()
+wifiCfg.doConnect('WiFi-2.4-CC88', (nvs.read_str('wifi_pwd')))
+m5mqtt = M5mqtt('Thermostat', '192.168.0.22', 1883, 'IoT', (nvs.read_str('mqtt_pwd')), 300)
+m5mqtt.subscribe(str('thermostat/weekSchedule'), cb_schedule)
+m5mqtt.start()
 rtc.settime('ntp', host='de.pool.ntp.org', tzone=2)
+
+
+# always loop
 while True:
+    # Resync the real time clock every day, and force automatic mode unless OFF
     if (rtc.datetime()[3]) != prev_weekday:
-        rtc.settime('ntp', host='de.pool.ntp.org', tzone=2)
-        mode = 'AUTO'
+        try:
+            rtc.settime('ntp', host='de.pool.ntp.org', tzone=2)
+        except:
+            wifiCfg.reconnect()
+
+        if mode != 'OFF':
+            mode = 'AUTO'
+
         prev_weekday = rtc.datetime()[3]
+
+    # publish the temperature every 5 min
+    if (time.ticks_ms()) > prev_time_publish + 300000:
+        try:
+            m5mqtt.publish(str('thermostat/temperature'),str(curr_temp))
+        except:
+            wifiCfg.reconnect()
+            m5mqtt = M5mqtt('Thermostat', '192.168.0.22', 1883, 'IoT', (nvs.read_str('mqtt_pwd')), 300)
+            m5mqtt.start()
+            m5mqtt.publish(str('thermostat/temperature'), str(curr_temp))
+        prev_time_publish = time.ticks_ms()
+
+    # Adjust displayed time each second
     if (time.ticks_ms()) > prev_time_clock + 1000:
         clock_lbl.set_text(str(rtc.printRTCtime()))
         prev_time_clock = time.ticks_ms()
+
+    # regulate every 5 sec
     if (time.ticks_ms()) > prev_time_regu + 5000:
         curr_temp = float(temperature())
         t.set_text(str(curr_temp))
@@ -386,20 +443,31 @@ while True:
             cmd_temp = night_temp
         regu()
         battery_lbl.set_text(
-            str((str(((str('Bat. ') + str((map_value((power.getBatVoltage()), 3.7, 4.1, 0, 100)))))) + str('%'))))
+            str((str((str('Bat. ') + str((map_value((power.getBatVoltage()), 3.7, 4.1, 0, 100))))) + str('%'))))
         prev_time_regu = time.ticks_ms()
+
+    # Switch from ON to AUTO mode if mode was ON for more than 5 min
     if (time.ticks_ms()) > prev_time_on + timeout_on and mode == 'ON':
         set_AUTO()
+
+    # Read the touch screen
     if touch.status():
         X = touch.read()[0]
         Y = touch.read()[1]
-        if X > 10 and X < 310 and Y > 80 and Y < 150:
+
+        # A touch in the middle toggle screen brightness
+        if 10 < X < 310 and 80 < Y < 150:
             screen.set_screen_brightness((100 if brightness_flip else 15))
             prev_time_screen = time.ticks_ms()
             brightness_flip = not brightness_flip
             wait_ms(300)
+
+    # Exit edit mode after 30 sec
     if (time.ticks_ms()) > prev_time_exit + 30000 and (edit_day or edit_night):
         hide_edit_button()
+
+    # Exit screen brightness at 100% after timeout
     if (time.ticks_ms()) > prev_time_screen + timeout_screen:
         screen.set_screen_brightness(15)
-    wait_ms(2)
+
+    wait_ms(25)
