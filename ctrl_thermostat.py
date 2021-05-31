@@ -1,5 +1,55 @@
-import time
+"""
 
+M5Stack Core 2 regulated thermostat
+===================================
+
+Author:     X. Mayeur
+Version:    v1.0
+
+Hardware:   M5Stack Core2
+            DHT22 on pin 33
+            mini relay module on pin 32
+
+Function:
+
+            - This program read the DTH22 temperature and regulate it using a reference temperature
+            - The regulator is a simple hysteresis comparator switching a relay on and off if the actual temperature
+            differs from more than 1°C with respect to the reference temperature
+            - The reference temperature is adjusted according to a weekly schedule having one or more periods to
+            switch between the day and night temperature references. A period has a start and end hour (format 'HHMM')
+            for which the reference temperature will be day temperature reference
+            - Day and night temperature references are editable via the screen using the displayed buttons
+            - Week schedule is not editable from UI but can be set by publishing it via mqtt
+            on the topic thermostat/weekSchedule
+            - The thermostat can be switched to the following modes:
+                - OFF: relay stays open forever - thermostat is OFF
+                - ON: relays stays closed for the next 5 minutes then switch to AUTO
+                - AUTO: the temperature is regulated according to week schedule
+                - DAY: the temperature is regulated to the day reference temperature until the next day
+                - NIGHT: the temperature is regulated to the night reference temperature until the next day
+
+Diplay Screen:
+
+            - Upper section shows:
+                - a thermometer icon, followed by the acual measured temperature and followed by the thermostat mode
+                - a small red dot under the thermometer icon indicates the relay is actually closed
+                - the full date / time is display and refresh every second.
+
+            - the middle section shows:
+                - a sun icon, with the current schedule start/end hour & minutes, and with the day reference
+                 temperature below
+                - a moon icon, with the night reference temperature below
+
+            - bottom section:
+                - three yellow buttons:
+                    - "day": edit the day reference temperature
+                    - "night": edit the night reference temperature
+                    - mode: OFF -> ON -> AUTO -> DAY -> NIGHT mode switch
+                - in edit mode:
+                    - plus / minus / OK buttons
+
+"""
+import time
 import nvs
 import unit
 import wifiCfg
