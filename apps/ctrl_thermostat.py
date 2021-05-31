@@ -131,7 +131,7 @@ end_lbl = M5Label('2230', x=123, y=102, color=0x000, font=FONT_MONT_14, parent=N
 from numbers import Number
 
 wifiCfg.doConnect('WiFi-2.4-CC88', (nvs.read_str('wifi_pwd')))
-rtc.settime('ntp', host='de.pool.ntp.org', tzone=2)
+rtc.settime('ntp', host='de.pool.ntp.org', tzone=3)
 
 
 # Connect to DHT22 temperature /  humidity sensor
@@ -465,10 +465,10 @@ while True:
     # Resync the real time clock every day, and force automatic mode unless OFF
     if (rtc.datetime()[3]) != prev_weekday:
         try:
-            rtc.settime('ntp', host='de.pool.ntp.org', tzone=2)
+            rtc.settime('ntp', host='de.pool.ntp.org', tzone=3)
         except:
             wifiCfg.doConnect('WiFi-2.4-CC88', (nvs.read_str('wifi_pwd')))
-            rtc.settime('ntp', host='de.pool.ntp.org', tzone=2)
+            rtc.settime('ntp', host='de.pool.ntp.org', tzone=3)
 
         if mode != 'OFF':
             mode = 'AUTO'
