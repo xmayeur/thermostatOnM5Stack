@@ -2,11 +2,14 @@
 # M5Stack Core 2 regulated thermostat
 
 Author:     X. Mayeur
+Date:       June 1st, 2021
 Version:    v1.0
 
-Hardware:   M5Stack Core2
-            DHT22 on pin 33
-            mini relay module on pin 32
+## Hardware
+
+- M5Stack Core2
+- DHT22 on pin 33
+- mini relay module on pin 32
 
 ## Functionality:
 
