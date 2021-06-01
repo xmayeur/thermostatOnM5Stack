@@ -10,50 +10,10 @@ Hardware:   M5Stack Core2
             DHT22 on pin 33
             mini relay module on pin 32
 
-Function:
-
-            - This program read the DTH22 temperature and regulate it using a reference temperature
-            - The regulator is a simple hysteresis comparator switching a relay on and off if the actual temperature
-            differs from more than 1°C with respect to the reference temperature
-            - The reference temperature is adjusted according to a weekly schedule having one or more periods to
-            switch between the day and night temperature references. A period has a start and end hour (format 'HHMM')
-            for which the reference temperature will be day temperature reference
-            - Day and night temperature references are editable via the screen using the displayed buttons
-            - Week schedule is not editable from UI but can be set by publishing it via mqtt
-            on the topic thermostat/weekSchedule
-            - The thermostat can be switched to the following modes:
-                - OFF: relay stays open forever - thermostat is OFF
-                - ON: relays stays closed for the next 5 minutes then switch to AUTO
-                - AUTO: the temperature is regulated according to week schedule
-                - DAY: the temperature is regulated to the day reference temperature until the next day
-                - NIGHT: the temperature is regulated to the night reference temperature until the next day
-            - A touch on the middle of the display toggle the screen brightness between 15% and 100%.
-              the screen is always dimmed to 15% after 30 sec.
-
-Diplay Screen:
-
-            - Upper section shows:
-                - a thermometer icon, followed by the acual measured temperature and followed by the thermostat mode switch
-                - the switch allows to move between automatic mode, or forced day or night regulated temperature
-                - above the switch, the charge of the internal M5Stack battery is shown, in case of deconnection from its main supply
-                - a small red dot under the thermometer icon indicates that the relay is actually closed
-                - the full date / time is display and refresh every second.
-
-            - the middle section shows:
-                - a sun icon, with the current schedule start/end hour & minutes, and with the day reference
-                 temperature below
-                - a moon icon, with the night reference temperature below
-
-            - bottom section:
-                - three yellow buttons:
-                    - "day": edit the day reference temperature
-                    - "night": edit the night reference temperature
-                    - mode: OFF -> ON -> AUTO mode switch
-                - in edit mode:
-                    - plus / minus / OK buttons
-
 """
+import json
 import time
+
 import nvs
 import unit
 import wifiCfg
@@ -64,7 +24,6 @@ from m5stack import *
 from m5stack import touch
 from m5stack_ui import *
 from uiflow import *
-import json
 
 screen = M5Screen()
 screen.clean_screen()
@@ -98,6 +57,8 @@ X = None
 prev_time_screen = None
 Y = None
 timeout_screen = None
+time_zone = 2
+config = {}
 
 # Load UI screen
 moon = M5Img("res/moon.png", x=163, y=87, parent=None)
@@ -131,8 +92,7 @@ end_lbl = M5Label('2230', x=123, y=102, color=0x000, font=FONT_MONT_14, parent=N
 from numbers import Number
 
 wifiCfg.doConnect('WiFi-2.4-CC88', (nvs.read_str('wifi_pwd')))
-rtc.settime('ntp', host='de.pool.ntp.org', tzone=3)
-
+rtc.settime('ntp', host='de.pool.ntp.org', tzone=time_zone)
 
 # Connect to DHT22 temperature /  humidity sensor
 DHT_PIN = 33
@@ -144,7 +104,7 @@ def humidity():
         dht_readinto(DHT_PIN, buf)
         return (buf[0] << 8 | buf[1]) * 0.1
     except:
-        return None
+        return 0
 
 
 def temperature():
@@ -156,7 +116,7 @@ def temperature():
         # print ('temp: ', t)
         return t
     except:
-        return None
+        return 0
 
 
 # Global variable initialization with default values
@@ -164,15 +124,36 @@ def init():
     global on, cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip
     global curr_day_schedule, curr_hrmin, curr_temp, prev_time_exit, curr_period, timeout_on, prev_weekday
     global prev_time_clock, prev_time_publish, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
+    global config
+    print('load schedule')
+    try:
+        week_schedule = json.load(open('weekSchedule.json', 'r'))
+    except:
+        week_schedule = [[{'start': '0630', 'end': '2330'}], [{'start': '0631', 'end': '2330'}],
+                         [{'start': '0632', 'end': '2200'}], [{'start': '0633', 'end': '2330'}],
+                         [{'start': '0635', 'end': '0853'}, {'start': '0855', 'end': '2330'}],
+                         [{'start': '0636', 'end': '2330'}], [{'start': '0637', 'end': '2330'}]]
+        json.dump(week_schedule, open('weekSchedule.json', 'w'))
 
-    week_schedule = [[{'start': '0630', 'end': '2330'}], [{'start': '0631', 'end': '2330'}],
-                     [{'start': '0632', 'end': '2200'}], [{'start': '0633', 'end': '2330'}],
-                     [{'start': '0635', 'end': '0853'}, {'start': '0855', 'end': '2330'}],
-                     [{'start': '0636', 'end': '2330'}], [{'start': '0637', 'end': '2330'}]]
+    print('load config')
+    try:
+        config = json.load(open('config.json', 'r'))
+        day_temp = config['day_temp']
+        night_temp = config['night_temp']
+        timeout_screen = config['timeout_screen']
+        time_zone = config['time_zone']
 
+    except OSError:
+        config = {
+          'day_temp': 20,
+          'night_temp': 14,
+          'timeout_screen': 120000,
+          'time_zone': 2
+        }
+        json.dump(config, open('config.json', 'w'))
+
+    print('init variables')
     brightness_flip = False
-    day_temp = 20
-    night_temp = 14
     edit_day = False
     edit_night = False
     curr_temp = 0
@@ -186,7 +167,6 @@ def init():
     prev_weekday = -1
     timeout_on = 0
     curr_hrmin = 0
-    timeout_screen = 120000
     curr_temp = temperature()
     t.set_text(str(curr_temp))
     mode_label.set_hidden(True)
@@ -251,7 +231,7 @@ def NIGHT():
 # Force th thermostat to be always ON for the next 5 minutes
 def set_ON():
     global on, cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip, \
-        urr_day_schedule, curr_hrmin, curr_temp, prev_time_exit, curr_period, timeout_on, prev_weekday, prev_time_clock,\
+        urr_day_schedule, curr_hrmin, curr_temp, prev_time_exit, curr_period, timeout_on, prev_weekday, prev_time_clock, \
         prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
     mode = 'ON'
     mode_label.set_hidden(False)
@@ -329,6 +309,7 @@ def regu():
             relay_btn.set_hidden(False)
         else:
             pass
+
 
 # Assign the different buttons of the UI
 
@@ -443,57 +424,103 @@ def buttonC_wasPressed():
 
 btnC.wasPressed(buttonC_wasPressed)
 
+
 # Call back function for the subscription to mqtt topic thermostat/weekSchedule
 def cb_schedule(topic_data):
     global week_schedule
     print('Got new schedule!')
     week_schedule = json.loads(topic_data)
-    with open('weekSchedule.json', 'w') as fd:
-      fd.write(topic_data)
+    json.dump(topic_data, open('weekSchedule.json', 'w'))
+
+
+def cb_day_temp(topic_data):
+    global day_temp, config
+    print('Got new day_temp')
+    day_temp = int(topic_data)
+    config['day_temp'] = day_temp
+    json.dump(config, open('config.json', 'w'))
+    t_day.set_text(str(day_temp))
+
+
+def cb_night_temp(topic_data):
+    global night_temp, config
+    print('Got new night_temp')
+    night_temp = int(topic_data)
+    config['night_temp'] = night_temp
+    json.dump(config, open('config.json', 'w'))
+    t_night.set_text(str(night_temp))
+
+
+
+def cb_timeout_screen(topic_data):
+    global timeout_screen, config
+    print('Got new timeout_screen')
+    timeout_screen = int(topic_data) * 1000
+    config['timeout_screen'] = timeout_screen
+    json.dump(config, open('config.json', 'w'))
+
+
+def cb_time_zone(topic_data):
+    global time_zone, config
+    print('Got new time_zone')
+    time_zone = int(topic_data)
+    config['time_zone'] = time_zone
+    json.dump(config, open('config.json', 'w'))
 
 
 # Start the main program
 
 # All initiatilizations
 init()
+print('Start mqtt client')
 m5mqtt = M5mqtt('Thermostat', '192.168.0.17', 1884, 'IoT', (nvs.read_str('mqtt_pwd')), 300)
-m5mqtt.subscribe(str('thermostat/weekSchedule'), cb_schedule)
+print('subscribe to topcs')
+m5mqtt.subscribe('thermostat/weekSchedule', cb_schedule)
+m5mqtt.subscribe('thermostat/dayTemp', cb_day_temp)
+m5mqtt.subscribe('thermostat/nightTemp', cb_night_temp)
+m5mqtt.subscribe('thermostat/timeoutScreen', cb_timeout_screen)
+m5mqtt.subscribe('thermostat/timeZone', cb_time_zone)
+print('start listening to events')
 m5mqtt.start()
 
 # always loop
 while True:
     # Resync the real time clock every day, and force automatic mode unless OFF
     if (rtc.datetime()[3]) != prev_weekday:
+        print('new day - schedule reset')
         try:
-            rtc.settime('ntp', host='de.pool.ntp.org', tzone=3)
+            rtc.settime('ntp', host='de.pool.ntp.org', tzone=time_zone)
         except:
             wifiCfg.doConnect('WiFi-2.4-CC88', (nvs.read_str('wifi_pwd')))
-            rtc.settime('ntp', host='de.pool.ntp.org', tzone=3)
+            rtc.settime('ntp', host='de.pool.ntp.org', tzone=time_zone)
+            print('Reconnecting...')
 
         if mode != 'OFF':
             mode = 'AUTO'
 
         try:
-          with open('weekSchedule.json', 'r') as fd:
-              week_schedule = json.loads(fd.read())
+            week_schedule = json.load(open('weekSchedule.json', 'r'))
         except:
-          pass
+            pass
 
         prev_weekday = rtc.datetime()[3]
 
     # publish the temperature every 5 min
     if (time.ticks_ms()) > prev_time_publish + 300000:
-        prev_time_publish = time.ticks_ms()
         try:
-          m5mqtt.publish(str('thermostat/temperature'), str(curr_temp))
-          print ('Temp is ' + str(curr_temp) + 'C')
+            m5mqtt.publish('thermostat/temperature', str(curr_temp))
+            _humidity = 0
+            _humidity = humidity()
+            m5mqtt.publish('thermostat/humidity', str(_humidity))
+            print('Temp is ' + str(curr_temp) + 'C - Humidity is ' + str(_humidity) + '%')
+            prev_time_publish = time.ticks_ms()
         except:
-          wifiCfg.doConnect('WiFi-2.4-CC88', (nvs.read_str('wifi_pwd')))
-          m5mqtt = M5mqtt('Thermostat', '192.168.0.17', 1884, 'IoT', (nvs.read_str('mqtt_pwd')), 300)
-          m5mqtt.start()
-          m5mqtt.publish(str('thermostat/temperature'), str(curr_temp))
-          print ('cannot publish!')
-
+            print('Cannot publish!')
+            wifiCfg.doConnect('WiFi-2.4-CC88', (nvs.read_str('wifi_pwd')))
+            m5mqtt = M5mqtt('Thermostat', '192.168.0.17', 1884, 'IoT', (nvs.read_str('mqtt_pwd')), 300)
+            m5mqtt.start()
+            prev_time_publish = time.ticks_ms() + 290000
+            print('Reconnecting!')
 
     # Adjust displayed time each second
     if (time.ticks_ms()) > prev_time_clock + 1000:

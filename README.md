@@ -1,6 +1,5 @@
 
-M5Stack Core 2 regulated thermostat
-===================================
+# M5Stack Core 2 regulated thermostat
 
 Author:     X. Mayeur
 Version:    v1.0
@@ -9,7 +8,7 @@ Hardware:   M5Stack Core2
             DHT22 on pin 33
             mini relay module on pin 32
 
-Function:
+## Functionality:
 
 - This program read the DTH22 temperature and regulate it using a reference temperature
 - The regulator is a simple hysteresis comparator switching a relay on and off if the actual temperature
@@ -29,7 +28,7 @@ on the topic thermostat/weekSchedule
 - A touch on the middle of the display toggle the screen brightness between 15% and 100%.
   the screen is always dimmed to 15% after 30 sec.
 
-Display:
+## User Interface
 
 ![display](ScreenCapture.PNG)
 
@@ -52,3 +51,28 @@ Display:
         - mode: OFF -> ON -> AUTO mode switch
     - in edit mode:
         - plus / minus / OK buttons
+
+## Events
+
+- Publish Temperature and humidity topics every 5 minutes:
+    - `thermostat/temperature`
+    - `thermostat/humidity`
+    
+- Subscribe to configuration update commands
+    - `thermostat/dayTemp`:  integer, day temperature target in Celsius degrees
+    - `thermostat/nightTemp`: integer, night temperature target in Celsius degrees   
+    - `thermostat/timeZone`: integer, time_zone (e.g. CET = 2)
+    - `thermostat/timeoutScreen`: integer, timeout in seconds before display dims
+    - `thermostat/weekSchedule`: 
+      a json object with the weekly schedule of periods defining the day temperature targets
+      as an array[7,n] of {"start..., "end":...} key value pairs dictionary, like:
+      ```
+        [
+            [{"start": "0800", "end": "1000"}, {"start": "1730", "end": "2300"} ],
+            [],...
+        ] 
+      ```
+      where index 0 of the outer array correspond to Monday periods, index 1 to Tuesday periods, etc.
+      In the above example, the Monday temperature will be regulated on the day temperature between 8AM and 10AM and 
+      between 5:30PM and 11PM, else it will be regulated on the night temperature target.
+      
