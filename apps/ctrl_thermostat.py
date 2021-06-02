@@ -431,7 +431,9 @@ btnB.wasPressed(buttonB_wasPressed)
 def buttonC_wasPressed():
     global cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip, curr_day_schedule, on, curr_hrmin, curr_temp, prev_time_exit, timeout_on, prev_weekday, prev_time_clock, curr_period, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
     hide_edit_button()
-    pass
+    config['night_temp'] = night_temp
+    config['day_temp'] = day_temp
+    json.dump(config, open('config.json', 'w'))
 
 
 btnC.wasPressed(buttonC_wasPressed)
