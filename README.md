@@ -59,25 +59,63 @@ on the topic thermostat/weekSchedule
 
 ### Publish topics every 5 minutes:
 
-- `thermostat/temperature`
-- `thermostat/humidity`
+- `thermostat/temperature`: float, actual measured temperature in Celsius degree
+- `thermostat/humidity`: float, actual humidity measure in percent
+  
+### Publish topics on request:
+- `thermostat/state`: see below
     
-### Subscribe to configuration update commands
+### Subscribe to the following commands topics
 
 - `thermostat/dayTemp`:  integer, day temperature target in Celsius degrees
-- `thermostat/nightTemp`: integer, night temperature target in Celsius degrees   
-- `thermostat/timeZone`: integer, time_zone (e.g. CET = 2)
-- `thermostat/timeoutScreen`: integer, timeout in seconds before display dims
-- `thermostat/weekSchedule`: 
-  a json object with the weekly schedule of periods defining the day temperature targets
-  as an array[7,n] of {"start..., "end":...} key value pairs dictionary, like:
-  ```
-    [
-        [{"start": "0800", "end": "1000"}, {"start": "1730", "end": "2300"} ],
-        [],...
-    ] 
-  ```
-  where index 0 of the outer array correspond to Monday periods, index 1 to Tuesday periods, etc.
-  In the above example, the Monday temperature will be regulated on the day temperature between 8AM and 10AM and 
-  between 5:30PM and 11PM, else it will be regulated on the night temperature target.
   
+- `thermostat/nightTemp`: integer, night temperature target in Celsius degrees
+  
+- `thermostat/timeZone`: integer, time_zone (e.g. CET = 2)
+  
+- `thermostat/timeoutScreen`: integer, timeout in seconds before display dims
+  
+- `thermostat/weekSchedule`:
+  
+    - a json object with the weekly schedule of periods defining the day temperature targets
+    as an array[7,n] of {"start..., "end":...} key value pairs dictionary, like:
+    ```
+      [
+          [{"start": "0800", "end": "1000"}, {"start": "1730", "end": "2300"} ],
+          [],...
+      ] 
+    ```
+    where index 0 of the outer array correspond to Monday periods, index 1 to Tuesday periods, etc.
+    In the above example, the Monday temperature will be regulated on the day temperature between 8AM and 10AM and 
+    between 5:30PM and 11PM, else it will be regulated on the night temperature target.
+  
+- `thermostat/mode`: string, set mode to 'AUTO', 'DAY', 'NIGHT', 'ON', or 'OFF'
+
+- `thermostat/getState`: ask for the thermostat state, get in return an event on topic `thermostat/state`
+   event payload in return is the following JSON object:
+  ```
+  {
+    "config": {
+      'day_temp': <integer, day temperature target>,
+      'night_temp': <integer, night temperature target>,
+      'timeout_screen': <integer, screen dimmmed timeout in ms>,
+      'time_zone': <integer, tzone number>,
+      'wifi_ssid': <string, wifi SSID name>,
+      'mqtt_host': <string, IP address of mqtt host>,
+      'mqtt_user': <string: user name to connect on mqtt host>
+    },
+    "week_schedule": [
+          [{'start': 'HHMM', 'end': 'HHMM'}, ...], 
+          [{'start': 'HHMM', 'end': 'HHMM'}, ...],
+          [{'start': 'HHMM', 'end': 'HHMM'}, ...],
+          [{'start': 'HHMM', 'end': 'HHMM'}, ...],
+          [{'start': 'HHMM', 'end': 'HHMM'}, ...],
+          [{'start': 'HHMM', 'end': 'HHMM'}, ...],
+          [{'start': 'HHMM', 'end': 'HHMM'}, ...]
+    ],
+    "mode": <string, mode>,
+    "cmd_temp": <integer, cmd_temp>,
+    "day_temp": <integer, day_temp>,
+    "night_temp": <integer, night_temp>
+  }
+  ```

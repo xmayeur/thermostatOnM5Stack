@@ -72,7 +72,7 @@ plus = M5Label('+', x=151, y=215, color=0x000, font=FONT_MONT_30, parent=None)
 touch_day = M5Btn(text='JOUR', x=55, y=180, w=70, h=30, bg_c=0xf1e99d, text_c=0x000000, font=FONT_MONT_14, parent=None)
 minus = M5Label('-', x=50, y=206, color=0x000, font=FONT_MONT_44, parent=None)
 clock_lbl = M5Label('2021/01/01', x=35, y=59, color=0x1407a3, font=FONT_MONT_18, parent=None)
-touch_nigth = M5Btn(text='NUIT', x=149, y=180, w=70, h=30, bg_c=0xf1e99d, text_c=0x000000, font=FONT_MONT_14,
+touch_night = M5Btn(text='NUIT', x=149, y=180, w=70, h=30, bg_c=0xf1e99d, text_c=0x000000, font=FONT_MONT_14,
                     parent=None)
 OK = M5Label('OK', x=255, y=220, color=0x000, font=FONT_MONT_18, parent=None)
 relay_btn = M5Btn(text='   .', x=7, y=61, w=15, h=15, bg_c=0xf60202, text_c=0xfa0303, font=FONT_MONT_14, parent=None)
@@ -255,6 +255,7 @@ def set_ON():
     relay0.on()
     prev_time_on = time.ticks_ms()
     timeout_on = 60000
+    auto_txt.set_hidden(True)
 
 
 # Switch off the thermostat function
@@ -270,7 +271,7 @@ def set_OFF():
     relay_btn.set_hidden(True)
     relay0.off()
     timeout_on = 0
-
+    auto_txt.set_hidden(True)
 
 # set the thermostat in automatic & regulated more, according to week schedule
 def set_AUTO():
@@ -356,7 +357,7 @@ def touch_day_pressed():
 touch_day.pressed(touch_day_pressed)
 
 
-def touch_nigth_pressed():
+def touch_night_pressed():
     global cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip, curr_day_schedule, on, curr_hrmin, curr_temp, prev_time_exit, timeout_on, prev_weekday, prev_time_clock, curr_period, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
     cmd_temp = night_temp
     edit_night = True
@@ -365,7 +366,7 @@ def touch_nigth_pressed():
     pass
 
 
-touch_nigth.pressed(touch_nigth_pressed)
+touch_night.pressed(touch_night_pressed)
 
 
 def touch_onoff_pressed():
@@ -462,7 +463,6 @@ def cb_night_temp(topic_data):
     t_night.set_text(str(night_temp))
 
 
-
 def cb_timeout_screen(topic_data):
     global timeout_screen, config
     print('Got new timeout_screen')
@@ -479,6 +479,42 @@ def cb_time_zone(topic_data):
     json.dump(config, open('config.json', 'w'))
 
 
+def cb_mode(topic_data):
+    print('Switch to mode ' + topic_data)
+    if topic_data == 'AUTO':
+        set_AUTO()
+    elif topic_data == 'OFF':
+        set_OFF()
+    elif topic_data == 'ON':
+        set_ON()
+    elif topic_data == 'DAY':
+        DAY()
+    elif topic_data == 'NIGHT':
+        NIGHT()
+    else:
+        print('Unknown mode')
+    
+
+def cb_state(topic_data):
+    global week_schedule, mode, config, day_temp, night_temp, cmd_temp, m5mqtt
+    _state = {
+        "config": config,
+        "week_schedule": week_schedule,
+        "mode": mode,
+        "cmd_temp": cmd_temp,
+        "day_temp": day_temp,
+        "night_temp": night_temp
+    }
+    try:
+        m5mqtt.publish('thermostat/state', json.dumps(_state))
+    except:
+        print('Cannot publish state!')
+        wifiCfg.doConnect(wifi_ssid, (nvs.read_str('wifi_pwd')))
+        m5mqtt = M5mqtt('Thermostat', mqtt_host, 1884, mqtt_user, (nvs.read_str('mqtt_pwd')), 300)
+        m5mqtt.start()
+        print('Reconnecting!')
+
+
 # Start the main program
 
 # All initiatilizations
@@ -491,6 +527,8 @@ m5mqtt.subscribe('thermostat/dayTemp', cb_day_temp)
 m5mqtt.subscribe('thermostat/nightTemp', cb_night_temp)
 m5mqtt.subscribe('thermostat/timeoutScreen', cb_timeout_screen)
 m5mqtt.subscribe('thermostat/timeZone', cb_time_zone)
+m5mqtt.subscribe('thermostat/mode', cb_mode)
+m5mqtt.subscribe('thermostat/getState', cb_state)
 print('start listening to events')
 m5mqtt.start()
 
