@@ -91,7 +91,31 @@ end_lbl = M5Label('2230', x=123, y=102, color=0x000, font=FONT_MONT_14, parent=N
 
 from numbers import Number
 
-wifiCfg.doConnect('WiFi-2.4-CC88', (nvs.read_str('wifi_pwd')))
+print('load config')
+try:
+    config = json.load(open('config.json', 'r'))
+    day_temp = config['day_temp']
+    night_temp = config['night_temp']
+    timeout_screen = config['timeout_screen']
+    time_zone = config['time_zone']
+    wifi_ssid = config['wifi_ssid']
+    mqtt_host = config['mqtt_host']
+    mqtt_user = config['mqtt_user']
+
+except OSError:
+    config = {
+      'day_temp': 20,
+      'night_temp': 14,
+      'timeout_screen': 120000,
+      'time_zone': 2,
+      'wifi_ssid': 'WiFi-2.4-CC88',
+      'mqtt_host': '192.168.0.17',
+      'mqtt_user': 'IoT'
+    }
+    json.dump(config, open('config.json', 'w'))
+
+
+wifiCfg.doConnect(wifi_ssid, (nvs.read_str('wifi_pwd')))
 rtc.settime('ntp', host='de.pool.ntp.org', tzone=time_zone)
 
 # Connect to DHT22 temperature /  humidity sensor
@@ -135,24 +159,11 @@ def init():
                          [{'start': '0636', 'end': '2330'}], [{'start': '0637', 'end': '2330'}]]
         json.dump(week_schedule, open('weekSchedule.json', 'w'))
 
-    print('load config')
-    try:
-        config = json.load(open('config.json', 'r'))
-        day_temp = config['day_temp']
-        night_temp = config['night_temp']
-        timeout_screen = config['timeout_screen']
-        time_zone = config['time_zone']
-
-    except OSError:
-        config = {
-          'day_temp': 20,
-          'night_temp': 14,
-          'timeout_screen': 120000,
-          'time_zone': 2
-        }
-        json.dump(config, open('config.json', 'w'))
 
     print('init variables')
+    t_night.set_text(str(night_temp))
+    t_day.set_text(str(day_temp))
+
     brightness_flip = False
     edit_day = False
     edit_night = False
@@ -473,7 +484,7 @@ def cb_time_zone(topic_data):
 # All initiatilizations
 init()
 print('Start mqtt client')
-m5mqtt = M5mqtt('Thermostat', '192.168.0.17', 1884, 'IoT', (nvs.read_str('mqtt_pwd')), 300)
+m5mqtt = M5mqtt('Thermostat', mqtt_host, 1884, mqtt_user, (nvs.read_str('mqtt_pwd')), 300)
 print('subscribe to topcs')
 m5mqtt.subscribe('thermostat/weekSchedule', cb_schedule)
 m5mqtt.subscribe('thermostat/dayTemp', cb_day_temp)
@@ -491,7 +502,7 @@ while True:
         try:
             rtc.settime('ntp', host='de.pool.ntp.org', tzone=time_zone)
         except:
-            wifiCfg.doConnect('WiFi-2.4-CC88', (nvs.read_str('wifi_pwd')))
+            wifiCfg.doConnect(wifi_ssid, (nvs.read_str('wifi_pwd')))
             rtc.settime('ntp', host='de.pool.ntp.org', tzone=time_zone)
             print('Reconnecting...')
 
@@ -511,13 +522,16 @@ while True:
             m5mqtt.publish('thermostat/temperature', str(curr_temp))
             _humidity = 0
             _humidity = humidity()
-            m5mqtt.publish('thermostat/humidity', str(_humidity))
-            print('Temp is ' + str(curr_temp) + 'C - Humidity is ' + str(_humidity) + '%')
+            if _humidity != 0:
+                m5mqtt.publish('thermostat/humidity', str(_humidity))
+                print('Temp is ' + str(curr_temp) + 'C - Humidity is ' + str(_humidity) + '%')
+            else:
+                print('Temp is ' + str(curr_temp) + 'C')
             prev_time_publish = time.ticks_ms()
         except:
             print('Cannot publish!')
-            wifiCfg.doConnect('WiFi-2.4-CC88', (nvs.read_str('wifi_pwd')))
-            m5mqtt = M5mqtt('Thermostat', '192.168.0.17', 1884, 'IoT', (nvs.read_str('mqtt_pwd')), 300)
+            wifiCfg.doConnect(wifi_ssid, (nvs.read_str('wifi_pwd')))
+            m5mqtt = M5mqtt('Thermostat', mqtt_host, 1884, mqtt_user, (nvs.read_str('mqtt_pwd')), 300)
             m5mqtt.start()
             prev_time_publish = time.ticks_ms() + 290000
             print('Reconnecting!')
