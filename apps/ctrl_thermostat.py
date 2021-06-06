@@ -59,6 +59,7 @@ Y = None
 timeout_screen = None
 time_zone = 2
 config = {}
+relay_state = False
 
 # Load UI screen
 moon = M5Img("res/moon.png", x=163, y=87, parent=None)
@@ -104,16 +105,15 @@ try:
 
 except OSError:
     config = {
-      'day_temp': 20,
-      'night_temp': 14,
-      'timeout_screen': 120000,
-      'time_zone': 2,
-      'wifi_ssid': 'WiFi-2.4-CC88',
-      'mqtt_host': '192.168.0.17',
-      'mqtt_user': 'IoT'
+        'day_temp': 20,
+        'night_temp': 14,
+        'timeout_screen': 120000,
+        'time_zone': 2,
+        'wifi_ssid': 'WiFi-2.4-CC88',
+        'mqtt_host': '192.168.0.17',
+        'mqtt_user': 'IoT'
     }
     json.dump(config, open('config.json', 'w'))
-
 
 wifiCfg.doConnect(wifi_ssid, (nvs.read_str('wifi_pwd')))
 rtc.settime('ntp', host='de.pool.ntp.org', tzone=time_zone)
@@ -158,7 +158,6 @@ def init():
                          [{'start': '0635', 'end': '0853'}, {'start': '0855', 'end': '2330'}],
                          [{'start': '0636', 'end': '2330'}], [{'start': '0637', 'end': '2330'}]]
         json.dump(week_schedule, open('weekSchedule.json', 'w'))
-
 
     print('init variables')
     t_night.set_text(str(night_temp))
@@ -273,6 +272,7 @@ def set_OFF():
     timeout_on = 0
     auto_txt.set_hidden(True)
 
+
 # set the thermostat in automatic & regulated more, according to week schedule
 def set_AUTO():
     global on, cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip, curr_day_schedule, curr_hrmin, curr_temp, prev_time_exit, curr_period, timeout_on, prev_weekday, prev_time_clock, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
@@ -310,14 +310,16 @@ def hide_edit_button():
 def regu():
     global on, cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip, \
         curr_day_schedule, curr_hrmin, curr_temp, prev_time_exit, curr_period, timeout_on, prev_weekday, \
-        prev_time_clock, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
+        prev_time_clock, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen, relay_state
 
     if curr_temp > float(cmd_temp) + 0.5:
         relay0.off()
+        relay_state = False
         relay_btn.set_hidden(True)
     else:
         if curr_temp < float(cmd_temp) - 0.5:
             relay0.on()
+            relay_state = True
             relay_btn.set_hidden(False)
         else:
             pass
@@ -439,6 +441,21 @@ def buttonC_wasPressed():
 btnC.wasPressed(buttonC_wasPressed)
 
 
+def publish_state():
+    global config, week_schedule, mode, cmd_temp, day_temp, night_temp, curr_temp, relay_state, m5mqtt
+    _state = {
+        "config": config,
+        "week_schedule": week_schedule,
+        "mode": mode,
+        "curr_temp": curr_temp,
+        "cmd_temp": cmd_temp,
+        "day_temp": day_temp,
+        "night_temp": night_temp,
+        "relay": relay_state
+    }
+    m5mqtt.publish('thermostat/state', json.dumps(_state))
+
+
 # Call back function for the subscription to mqtt topic thermostat/weekSchedule
 def cb_schedule(topic_data):
     global week_schedule
@@ -454,6 +471,7 @@ def cb_day_temp(topic_data):
     config['day_temp'] = day_temp
     json.dump(config, open('config.json', 'w'))
     t_day.set_text(str(day_temp))
+    publish_state()
 
 
 def cb_night_temp(topic_data):
@@ -463,6 +481,7 @@ def cb_night_temp(topic_data):
     config['night_temp'] = night_temp
     json.dump(config, open('config.json', 'w'))
     t_night.set_text(str(night_temp))
+    publish_state()
 
 
 def cb_timeout_screen(topic_data):
@@ -495,20 +514,14 @@ def cb_mode(topic_data):
         NIGHT()
     else:
         print('Unknown mode')
-    
+    publish_state()
+
 
 def cb_state(topic_data):
-    global week_schedule, mode, config, day_temp, night_temp, cmd_temp, m5mqtt
-    _state = {
-        "config": config,
-        "week_schedule": week_schedule,
-        "mode": mode,
-        "cmd_temp": cmd_temp,
-        "day_temp": day_temp,
-        "night_temp": night_temp
-    }
+    global m5mqtt
+
     try:
-        m5mqtt.publish('thermostat/state', json.dumps(_state))
+        publish_state()
     except:
         print('Cannot publish state!')
         wifiCfg.doConnect(wifi_ssid, (nvs.read_str('wifi_pwd')))
@@ -533,6 +546,7 @@ m5mqtt.subscribe('thermostat/mode', cb_mode)
 m5mqtt.subscribe('thermostat/getState', cb_state)
 print('start listening to events')
 m5mqtt.start()
+publish_state()
 
 # always loop
 while True:
