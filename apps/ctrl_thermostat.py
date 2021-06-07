@@ -219,6 +219,7 @@ def DAY():
         prev_time_clock, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
     mode = 'DAY'
     mode_label.set_hidden(True)
+    state.set_on()
     state.set_hidden(False)
     touch_onoff.set_btn_text('AUTO')
     cmd_temp = day_temp
@@ -231,6 +232,7 @@ def NIGHT():
     global on, cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip, curr_day_schedule, curr_hrmin, curr_temp, prev_time_exit, curr_period, timeout_on, prev_weekday, prev_time_clock, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
     mode = 'NIGHT'
     mode_label.set_hidden(True)
+    state.set_off()
     state.set_hidden(False)
     touch_onoff.set_btn_text('AUTO')
     cmd_temp = night_temp
@@ -321,8 +323,6 @@ def regu():
             relay0.on()
             relay_state = True
             relay_btn.set_hidden(False)
-        else:
-            pass
 
 
 # Assign the different buttons of the UI
@@ -331,7 +331,7 @@ def state_off():
     global cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip, curr_day_schedule, on, curr_hrmin, curr_temp, prev_time_exit, timeout_on, prev_weekday, prev_time_clock, curr_period, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
     NIGHT()
     auto_txt.set_hidden(True)
-    pass
+    publish_state()
 
 
 state.off(state_off)
@@ -341,7 +341,7 @@ def state_on():
     global cmd_temp, week_schedule, d, temp, mode, edit_night, day_temp, edit_day, night_temp, brightness_flip, curr_day_schedule, on, curr_hrmin, curr_temp, prev_time_exit, timeout_on, prev_weekday, prev_time_clock, curr_period, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
     DAY()
     auto_txt.set_hidden(True)
-    pass
+    publish_state()
 
 
 state.on(state_on)
@@ -353,7 +353,7 @@ def touch_day_pressed():
     edit_day = True
     show_plus_minus(True)
     prev_time_exit = time.ticks_ms()
-    pass
+    publish_state()
 
 
 touch_day.pressed(touch_day_pressed)
@@ -386,7 +386,7 @@ def touch_onoff_pressed():
         set_AUTO()
     else:
         set_ON()
-    pass
+    publish_state()
 
 
 touch_onoff.pressed(touch_onoff_pressed)
@@ -436,6 +436,7 @@ def buttonC_wasPressed():
     config['night_temp'] = night_temp
     config['day_temp'] = day_temp
     json.dump(config, open('config.json', 'w'))
+    publish_state()
 
 
 btnC.wasPressed(buttonC_wasPressed)
