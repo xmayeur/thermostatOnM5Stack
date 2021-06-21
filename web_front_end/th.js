@@ -15,13 +15,82 @@ let week = [
 ];
 let temp = 1;
 let schedule = [];
+
+
+
 var app = angular.module('th', [])
     .controller('thCtrl', function ($scope, $rootScope, $timeout, $interval) {
+
+        // power on/off toggle flag
+        let toggle = false;
+
+        // thermostat control button reference
+        let day = document.getElementById("dayToggle");
+        let night = document.getElementById("nightToggle");
+        let auto = document.getElementById("autoToggle");
+        let power = document.getElementById("onToggle");
 
         $scope.topic = topic;
         $scope.week = week;
         $scope.temp = temp;
-        $scope.Schedule = schedule;
+        $scope.schedule = schedule;
+        $scope.mode = 'OFF';
+        $scope.day_temp = 0;
+        $scope.night_temp = 0;
+
+
+        // action when a thermostat control button is clicked
+        $scope.action = function (value) {
+            console.log('action: ' + value);
+            // thermostat control button act as
+            // mutually exclusive radio button
+            // on click, set the color to green, and the others to grey
+            if (value === 'DAY') {
+                day.style = "color:green";
+                night.style = "color:grey";
+                auto.style = "color:grey";
+            }
+            if (value === 'NIGHT') {
+                day.style = "color:grey";
+                night.style = "color:green";
+                auto.style = "color:grey";
+            }
+            if (value === 'AUTO') {
+                day.style = "color:grey";
+                night.style = "color:grey";
+                auto.style = "color:green";
+            }
+
+            // if power button is clicked, toggle state
+            if (value === 'OFF') {
+                value = toggle ? 'ON' : 'OFF';
+                toggle = !toggle;
+            }
+
+            // send a message to the thermostat with the selected control
+            send('thermostat/mode',value);
+        }
+
+        // function to increment the day or night temperature values
+        $scope.incr = function (key, val) {
+            val = parseInt(val);
+            val += 1;
+            send({
+                topic: 'thermostat/' + key,
+                payload: val
+            });
+        }
+
+        // function to decrement the day or night temperature values
+        $scope.decr = function (key, val) {
+            val = parseInt(val);
+            val -= 1;
+            send({
+                topic: 'thermostat/' + key,
+                payload: val
+            });
+        }
+
 
         $scope.isOpen = false;
         $scope.pind = -1;
@@ -30,12 +99,13 @@ var app = angular.module('th', [])
 
         $scope.$watch('temp', function (newValue, oldValue) {
             $scope.temp = newValue;
-            console.log(newValue, ' <- ', oldValue);
+            console.log('temp:' + newValue, ' <- ', oldValue);
         });
         $scope.$watch('schedule', function (newValue, oldValue) {
             $scope.schedule = newValue;
-            console.log(newValue, ' <- ', oldValue);
+            console.log('schedule:' + newValue, ' <- ', oldValue);
         });
+
 
         MQTTconnect();
         mqtt.onMessageArrived = onMessageArrived;
@@ -51,11 +121,13 @@ var app = angular.module('th', [])
         function MQTTconnect() {
             console.log('connecting to mqtt server');
             mqtt = new Paho.MQTT.Client(host, port, 'clientJS');
-            $.getScript("./password.js", function (username, pwd) {
+            $.getScript("./password.js", function (o) {
+                o = JSON.parse(o);
+                console.log('user is: '+o.username);
                 mqtt.connect({
                     onSuccess: onConnect,
-                    userName: userName,
-                    password: pwd
+                    userName: o.username,
+                    password: o.pwd
                 });
             });
 
@@ -66,9 +138,13 @@ var app = angular.module('th', [])
             console.log('message arrived: ' + message.payloadString);
             data = JSON.parse(message.payloadString);
             console.log('temp: ' + String(data.curr_temp));
+            $scope.mode = data.mode;
+            $scope.day_temp = data.day_temp;
+            $scope.night_temp = data.night_temp;
             $scope.temp = data.curr_temp;
             $scope.schedule = data.week_schedule;
             $scope.$apply();
+
             // Double Click Open Input Field
             $timeout(function () {
                 $scope.$apply();
@@ -81,8 +157,13 @@ var app = angular.module('th', [])
                     addOnfocus();
                 });
             }, 100);
+
             console.log('topic:           ' + message.destinationName);
             mqtt.subscribe(topic);
+        }
+
+        function send(topic, msg){
+            console.log(topic +': '+ msg);
         }
 
         function setActiveCell(cell, p, i) {

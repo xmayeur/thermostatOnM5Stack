@@ -4,40 +4,95 @@
     <link rel="stylesheet" href="th.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css">
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular.min.js"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"
+            type="text/javascript"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
     <script src="th.js"></script>
     <meta charset="UTF-8">
     <title>Contrôle Thermostat</title>
 </head>
 <body>
+<div ng-app="th" ng-controller="thCtrl">
+    <div layout="column" layout-align="space center">
+        <div layout="row">
+            <div layout="row" layout-align="center center">
+                <i style="color:{{ (mode === 'DAY')? 'green' : 'grey' }}" id="dayToggle"
+                   class="fa fa-dot-circle-o fa-2x" aria-hidden="true" ng-click="action('DAY')"></i>
+                &nbsp;&nbsp;<p>Temperature Jour: {{day_temp}}°C </p>
+            </div>
+            <div layout="row">
+                <div layout="column" layout-align="center center" style="padding:10px">
+                    <i style="color:white" class="fa fa-caret-up fa-fw" aria-hidden="true"
+                       ng-click="incr('dayTemp', day_temp)"></i>
+                    <i style="color:white" class="fa fa-caret-down fa-fw" aria-hidden="true"
+                       ng-click="decr('dayTemp', day_temp)"></i>
+                </div>
+            </div>
+        </div>
 
-    <div ng-app="th" ng-controller="thCtrl">
-        <p>{{topic}}</p>
-        <p>Temperature: {{temp}}°C</p>
-        <div layout="row"  >
-            <table border="1" style="border: 1px; width:200px" class="table-editable">
-                 <thead>
-                <tr>
-                    <th>Jour</th>
-                    <th>Début</th>
-                    <th>Fin</th>
-                </tr>
-                </thead>
-                <tr ng-repeat="d in schedule">
-                        <td>{{week[$index]}}</td>
+        <div layout="row">
+            <div layout="row" layout-align="center center">
+                <i style="color:{{(mode === 'NIGHT')? 'green' : 'grey' }}" id="nightToggle"
+                   class="fa fa-dot-circle-o fa-2x" aria-hidden="true" ng-click="action('NIGHT')"></i>
+                &nbsp;&nbsp;<p>Temperature Nuit: {{night_temp}}°C </p>
+            </div>
+            <div layout="row">
+                <div layout="column" layout-align="center center" style="padding:10px">
+                    <i style="color:white" class="fa fa-caret-up fa-fw" aria-hidden="true"
+                       ng-click="incr('nightTemp', night_temp)"></i>
+                    <i style="color:white" class="fa fa-caret-down fa-fw" aria-hidden="true"
+                       ng-click="decr('nightTemp', night_temp)"></i>
+                </div>
+            </div>
+        </div>
 
-                        <td ng-repeat="s in d track by $index">
-                            {{s.start}}
-                        </td>
-                        <td ng-repeat="s in d track by $index">
-                            {{s.end}}
-                        </td>
+        <div layout="row">
+            <div layout="row" layout-align="center center">
+                <i style="color:{{(mode === 'AUTO')? 'green' : 'grey' }} " id="autoToggle"
+                   class="fa fa-dot-circle-o fa-2x" aria-hidden="true" ng-click="action('AUTO')"></i>
+                &nbsp;&nbsp;<p>Mode Automatique </p>
+            </div>
+        </div>
 
-                </tr>
-            </table>
+        <div layout="row" style="padding-top:25px">
+            <div layout="row" layout-align="center center">
+                <i style="color:{{(mode === 'OFF')? 'red' : 'green' }}" id="onToggle"
+                   class="fa fa-power-off fa-2x" aria-hidden="true" ng-click="action('OFF')"></i>
+                &nbsp;&nbsp;<p>Power on/off </p>
+            </div>
         </div>
     </div>
+
+    <div layout="row" style="padding-top:25px">
+        <h3> Périodes d'allumage du chauffage en mode 'jour' </h3>
+    </div>
+
+
+    <p>{{topic}}</p>
+    <p>Temperature: {{temp}}°C</p>
+    <div layout="row">
+        <table border="1" style="border: 1px; width:200px" class="table-editable">
+            <thead>
+            <tr>
+                <th>Jour</th>
+                <th>Début</th>
+                <th>Fin</th>
+            </tr>
+            </thead>
+            <tr ng-repeat="d in schedule">
+                <td>{{week[$index]}}</td>
+
+                <td ng-repeat="s in d track by $index">
+                    {{s.start}}
+                </td>
+                <td ng-repeat="s in d track by $index">
+                    {{s.end}}
+                </td>
+
+            </tr>
+        </table>
+    </div>
+</div>
 
 </body>
 </html>
