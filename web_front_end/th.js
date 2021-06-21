@@ -1,4 +1,3 @@
-import {username, pwd} from './password.js';
 let mqtt;
 const reconnectTimeout = 2000;
 const port = 9004;
@@ -51,13 +50,16 @@ var app = angular.module('th', [])
 
         function MQTTconnect() {
             console.log('connecting to mqtt server');
-
             mqtt = new Paho.MQTT.Client(host, port, 'clientJS');
-            mqtt.connect({
-                onSuccess: onConnect,
-                userName: userName,
-                password: pwd
+            $.getScript("./password.js", function (username, pwd) {
+                mqtt.connect({
+                    onSuccess: onConnect,
+                    userName: userName,
+                    password: pwd
+                });
             });
+
+
         }
 
         function onMessageArrived(message) {
