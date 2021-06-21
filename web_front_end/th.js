@@ -69,27 +69,21 @@ var app = angular.module('th', [])
 
             // send a message to the thermostat with the selected control
             send('thermostat/mode',value);
-        }
+        };
 
         // function to increment the day or night temperature values
         $scope.incr = function (key, val) {
             val = parseInt(val);
             val += 1;
-            send({
-                topic: 'thermostat/' + key,
-                payload: val
-            });
-        }
+            send('thermostat/' + key, String(val));
+        };
 
         // function to decrement the day or night temperature values
         $scope.decr = function (key, val) {
             val = parseInt(val);
             val -= 1;
-            send({
-                topic: 'thermostat/' + key,
-                payload: val
-            });
-        }
+            send('thermostat/' + key, String(val));
+        };
 
 
         $scope.isOpen = false;
@@ -116,6 +110,9 @@ var app = angular.module('th', [])
         function onConnect() {
             console.log('connected!');
             mqtt.subscribe(topic);
+            m = new Paho.MQTT.Message("");
+            m.destinationName = 'thermostat/getState';
+            mqtt.send(m);
         }
 
         function MQTTconnect() {
@@ -164,6 +161,9 @@ var app = angular.module('th', [])
 
         function send(topic, msg){
             console.log(topic +': '+ msg);
+            m = new Paho.MQTT.Message(msg);
+            m.destinationName = topic;
+            mqtt.send(m);
         }
 
         function setActiveCell(cell, p, i) {
