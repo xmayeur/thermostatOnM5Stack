@@ -118,13 +118,13 @@ var app = angular.module('th', [])
         function MQTTconnect() {
             console.log('connecting to mqtt server');
             mqtt = new Paho.MQTT.Client(host, port, 'clientJS');
-            $.getScript("./password.js", function (o) {
-                o = JSON.parse(o);
+            $.get("http://192.168.0.17:1880/redis?id=iot", function (o) {
+                // o = JSON.parse(o);
                 console.log('user is: '+o.username);
                 mqtt.connect({
                     onSuccess: onConnect,
                     userName: o.username,
-                    password: o.pwd
+                    password: o.password
                 });
             });
 

@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="stylesheet" href="th.css">
+    <link rel="stylesheet" href="./css/th.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css">
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"
             type="text/javascript"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-    <script src="th.js"></script>
+    <script src="scripts/th.js"></script>
     <meta charset="UTF-8">
     <title>Contrôle Thermostat</title>
 </head>
@@ -74,7 +74,7 @@
                 </tr>
                 </thead>
                 <tr ng-repeat="d in schedule">
-                    <td>{{week[$index]}}</td>
+                    <td class="no-edit">{{week[$index]}}</td>
 
                     <td ng-repeat="s in d track by $index">
                         {{s.start}}
