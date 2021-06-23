@@ -7,39 +7,47 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"
             type="text/javascript"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-    <script src="scripts/th.js"></script>
+    <script src="./scripts/th.js"></script>
     <meta charset="UTF-8">
     <title>Contrôle Thermostat</title>
 </head>
 <body>
 <div ng-app="th" ng-controller="thCtrl">
-
-    <h2>Température ambiante: {{temp}}°C</h2>
-    <div layout="column" layout-align="space center">
+  <div class="frame">
+	  <h4 style="text-align:center; font-family:Arial; margin:0; margin-top:27px;text-align:center"> THERMOSTAT </h4>
+	  <h4 style="color:blue; margin:0px; margin-bottom:33px; text-align:center">
+		<i  style="color:blue; position:relative; top:5px"
+                   class="fa fa-thermometer-three-quarters fa-2x" aria-hidden="true" ng-click="action('DAY')"></i>
+		&nbsp;
+		Température ambiante: {{temp}}°C
+	  </h4>
+  </div>
+  <div layout="column" layout-align="space center" class="box">
+	<h3 style="text-align:center"> Réglages du mode de fonctionnement </h3>	
         <div layout="row">
-            <p>
-                <i style="color:{{ (mode === 'DAY')? 'green' : 'grey' }}" id="dayToggle"
+	    <p>            
+                <i  style="color:{{ (mode === 'DAY')? 'blue' : 'grey' }}; position:relative; top:5px" id="dayToggle"
                    class="fa fa-dot-circle-o fa-2x" aria-hidden="true" ng-click="action('DAY')"></i>
-                &nbsp;&nbsp;Temperature Jour: {{day_temp}}°C
+                &nbsp;&nbsp;Temperature Jour: {{day_temp}}°C&nbsp;&nbsp;
 
-                <i style="color:green" class="fa fa-caret-down fa-2x" aria-hidden="true"
+                <i  style="color:green; position:relative; top:5px" class="fa fa-caret-down fa-2x" aria-hidden="true"
                    ng-click="decr('dayTemp', day_temp)"></i>
-                <i style="color:green" class="fa fa-caret-up fa-2x" aria-hidden="true"
+                <i  style="color:green; position:relative; top:5px" class="fa fa-caret-up fa-2x" aria-hidden="true"
                    ng-click="incr('dayTemp', day_temp)"></i>
-
-            </p>
+	   </p>
+            
 
         </div>
 
         <div layout="row">
             <p>
-                <i style="color:{{(mode === 'NIGHT')? 'green' : 'grey' }}" id="nightToggle"
+                <i style="color:{{(mode === 'NIGHT')? 'blue' : 'grey' }}; position:relative; top:5px" id="nightToggle"
                    class="fa fa-dot-circle-o fa-2x" aria-hidden="true" ng-click="action('NIGHT')"></i>
-                &nbsp;&nbsp;Temperature Nuit: {{night_temp}}°C
+                &nbsp;&nbsp;Temperature Nuit: {{night_temp}}°C&nbsp;&nbsp;
 
-                <i style="color:green" class="fa fa-caret-down fa-2x" aria-hidden="true"
+                <i style="color:green; position:relative; top:5px" class="fa fa-caret-down fa-2x" aria-hidden="true"
                    ng-click="decr('nightTemp', night_temp)"></i>
-                <i style="color:green" class="fa fa-caret-up fa-2x" aria-hidden="true"
+                <i style="color:green; position:relative; top:5px" class="fa fa-caret-up fa-2x" aria-hidden="true"
                    ng-click="incr('nightTemp', night_temp)"></i>
 
             </p>
@@ -47,23 +55,22 @@
 
         <div layout="row">
             <p>
-                <i style="color:{{(mode === 'AUTO')? 'green' : 'grey' }} " id="autoToggle"
+                <i style="color:{{(mode === 'AUTO')? 'blue' : 'grey' }}; position:relative; top:5px" id="autoToggle"
                    class="fa fa-dot-circle-o fa-2x" aria-hidden="true" ng-click="action('AUTO')"></i>
-                &nbsp;&nbsp;Mode Automatique
+                &nbsp;&nbsp;Mode Automatique&nbsp;&nbsp;
 
             </p>
             <p>
-                <i style="color:{{(mode === 'OFF')? 'red' : 'green' }}" id="onToggle"
+                <i style="color:{{(mode === 'OFF')? 'red' : 'green' }}; position:relative; top:5px" id="onToggle"
                    class="fa fa-power-off fa-2x" aria-hidden="true" ng-click="action('OFF')"></i>
-                &nbsp;&nbsp;Power on/off
+                &nbsp;&nbsp;Power on/off&nbsp;&nbsp;
             </p>
         </div>
-
-        <div layout="row" style="padding-top:25px">
-            <h3> Périodes d'allumage du chauffage en mode 'jour' </h3>
-        </div>
-
-
+      </div>
+        <div layout="row" class="box">
+            <h3 style="text-align:center"> Périodes de chauffage en mode 'jour' </h3>
+        
+      		
         <div layout="row">
             <table border="1" style="border: 1px; width:200px" class="table-editable">
                 <thead>
@@ -76,7 +83,7 @@
                 </tr>
                 </thead>
                 <tr ng-repeat="d in schedule">
-                    <td class="no-edit">{{week[$index]}}</td>
+                    <td>{{week[$index]}}</td>
 
                     <td ng-repeat="s in d track by $index">
                         {{s.start}}
@@ -88,7 +95,7 @@
                 </tr>
             </table>
         </div>
-    </div>
+      </div> 
 
 </body>
 </html>

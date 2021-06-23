@@ -45,22 +45,23 @@ var app = angular.module('th', [])
             // thermostat control button act as
             // mutually exclusive radio button
             // on click, set the color to green, and the others to grey
+	
             if (value === 'DAY') {
-                day.style = "color:green";
-                night.style = "color:grey";
-                auto.style = "color:grey";
+                day.style = "color:blue; position:relative; top:5px";
+                night.style = "color:grey; position:relative; top:5px";
+                auto.style = "color:grey; position:relative; top:5px";
             }
             if (value === 'NIGHT') {
-                day.style = "color:grey";
-                night.style = "color:green";
-                auto.style = "color:grey";
+                day.style = "color:grey; position:relative; top:5px";
+                night.style = "color:blue; position:relative; top:5px";
+                auto.style = "color:grey; position:relative; top:5px";
             }
             if (value === 'AUTO') {
-                day.style = "color:grey";
-                night.style = "color:grey";
-                auto.style = "color:green";
+                day.style = "color:grey; position:relative; top:5px";
+                night.style = "color:grey; position:relative; top:5px";
+                auto.style = "color:blue; position:relative; top:5px";
             }
-
+	
             // if power button is clicked, toggle state
             if (value === 'OFF') {
                 value = toggle ? 'ON' : 'OFF';
@@ -120,7 +121,7 @@ var app = angular.module('th', [])
             mqtt = new Paho.MQTT.Client(host, port, 'clientJS');
             $.get("http://192.168.0.17:1880/redis?id=iot", function (o) {
                 // o = JSON.parse(o);
-                console.log('user is: '+o.username);
+                // console.log('user is: '+o.username);
                 mqtt.connect({
                     onSuccess: onConnect,
                     userName: o.username,
