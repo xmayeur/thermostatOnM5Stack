@@ -589,7 +589,7 @@ while True:
         try:
             m5mqtt.publish('thermostat/temperature', str(curr_temp))
             _humidity = 0
-            _humidity = humidity()
+            # _humidity = humidity()
             if _humidity != 0:
                 m5mqtt.publish('thermostat/humidity', str(_humidity))
                 print('Temp is ' + str(curr_temp) + 'C - Humidity is ' + str(_humidity) + '%')
