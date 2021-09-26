@@ -110,12 +110,14 @@ except OSError:
         'night_temp': 14,
         'timeout_screen': 120000,
         'time_zone': 2,
-        'wifi_ssid': 'WiFi-2.4-CC88',
-        'mqtt_host': '192.168.0.17',
+        'wifi_ssid': 'Proximus-Home-0660',
+        'mqtt_host': '192.168.1.10',
         'mqtt_user': 'IoT'
     }
     json.dump(config, open('config.json', 'w'))
 
+# nvs.write(str('wifi_pwd'), 'xxx')
+# nvs.write(str('mqtt_pwd'), 'xxx')
 print('Connect to wifi')
 wifiCfg.doConnect(wifi_ssid, (nvs.read_str('wifi_pwd')))
 print('set up real-time clock')
