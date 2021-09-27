@@ -24,6 +24,7 @@ from m5stack import *
 from m5stack import touch
 from m5stack_ui import *
 from uiflow import *
+from machine import WDT
 
 screen = M5Screen()
 screen.clean_screen()
@@ -116,8 +117,8 @@ except OSError:
     }
     json.dump(config, open('config.json', 'w'))
 
-# nvs.write(str('wifi_pwd'), 'xxx')
-# nvs.write(str('mqtt_pwd'), 'xxx')
+nvs.write(str('wifi_pwd'), 'wbjs7p2k3asyb')
+# nvs.write(str('mqtt_pwd'), 'Bretzel58')
 print('Connect to wifi')
 wifiCfg.doConnect(wifi_ssid, (nvs.read_str('wifi_pwd')))
 print('set up real-time clock')
@@ -167,7 +168,6 @@ def init():
     print('init variables')
     t_night.set_text(str(night_temp))
     t_day.set_text(str(day_temp))
-    print(1)
     brightness_flip = False
     edit_day = False
     edit_night = False
@@ -182,15 +182,10 @@ def init():
     prev_weekday = -1
     timeout_on = 0
     curr_hrmin = 0
-    print(2)
     t.set_text(str(curr_temp))
-    print(3)
     mode_label.set_hidden(True)
-    print(4)
     show_plus_minus(False)
-    print(5)
     set_AUTO()
-    print(6)
 
 
 # Use the week schedule object to know what is the current temperature command for the thermostat
@@ -215,7 +210,8 @@ def set_cmd_temp_auto():
                 auto_txt.set_pos(226, 34)
                 break
         except:
-            print('error in weekschedule config', week_schedule)
+            _msg = 'error in weekschedule config'
+            log(_msg)
 
     if temp != day_temp:
         temp = night_temp
@@ -457,6 +453,15 @@ def buttonC_wasPressed():
 btnC.wasPressed(buttonC_wasPressed)
 
 
+def log(msg):
+   global time, m5mqtt
+   log_msg = {
+    "time": time.ticks_ms(),
+    "message": msg
+   }
+   m5mqtt.publish('/thermostat/log', json.dumps(log_msg))
+
+
 def publish_state():
     global config, week_schedule, mode, cmd_temp, day_temp, night_temp, curr_temp, relay_state, m5mqtt
     _state = {
@@ -530,6 +535,8 @@ def cb_mode(topic_data):
         NIGHT()
     else:
         print('Unknown mode')
+        log('Unknown mode')
+
     publish_state()
 
 
@@ -543,16 +550,17 @@ def cb_state(topic_data):
         wifiCfg.doConnect(wifi_ssid, (nvs.read_str('wifi_pwd')))
         m5mqtt = M5mqtt('Thermostat', mqtt_host, 1884, mqtt_user, (nvs.read_str('mqtt_pwd')), 300)
         m5mqtt.start()
-        print('Reconnecting!')
+        log('Reconnecting!')
 
 
 # Start the main program
 
 # All initiatilizations
 init()
+wdt = WDT(timeout = 360000) # start the system watch dog
 print('Start mqtt client')
 m5mqtt = M5mqtt('Thermostat', mqtt_host, 1884, mqtt_user, (nvs.read_str('mqtt_pwd')), 300)
-print('subscribe to topcs')
+print('subscribe to topics')
 m5mqtt.subscribe('thermostat/weekSchedule', cb_schedule)
 m5mqtt.subscribe('thermostat/dayTemp', cb_day_temp)
 m5mqtt.subscribe('thermostat/nightTemp', cb_night_temp)
@@ -574,7 +582,7 @@ while True:
         except:
             wifiCfg.doConnect(wifi_ssid, (nvs.read_str('wifi_pwd')))
             rtc.settime('ntp', host='de.pool.ntp.org', tzone=time_zone)
-            print('Reconnecting...')
+            log('Reconnecting...')
 
         if mode != 'OFF':
             mode = 'AUTO'
@@ -604,7 +612,9 @@ while True:
             m5mqtt = M5mqtt('Thermostat', mqtt_host, 1884, mqtt_user, (nvs.read_str('mqtt_pwd')), 300)
             m5mqtt.start()
             prev_time_publish = time.ticks_ms() + 290000
-            print('Reconnecting!')
+            log('Reconnecting!')
+
+        wdt.feed()
 
     # Adjust displayed time each second
     if (time.ticks_ms()) > prev_time_clock + 1000:
