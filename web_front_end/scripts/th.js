@@ -1,7 +1,7 @@
 let mqtt;
 const reconnectTimeout = 2000;
 const port = 9004;
-const host = "192.168.0.17";
+const host = "192.168.1.10";
 const topic = 'thermostat/state';
 let data = {};
 let week = [
@@ -119,7 +119,7 @@ var app = angular.module('th', [])
         function MQTTconnect() {
             console.log('connecting to mqtt server');
             mqtt = new Paho.MQTT.Client(host, port, 'clientJS');
-            $.get("http://192.168.0.17:1880/redis?id=iot", function (o) {
+            $.get("http://"+host+":1880/redis?id=iot", function (o) {
                 // o = JSON.parse(o);
                 // console.log('user is: '+o.username);
                 mqtt.connect({
