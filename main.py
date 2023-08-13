@@ -12,6 +12,7 @@ Hardware:   M5Stack Core2
 
 """
 import json
+import time
 
 import nvs
 import unit
@@ -22,8 +23,8 @@ from m5mqtt import M5mqtt
 from m5stack import *
 from m5stack import touch
 from m5stack_ui import *
-from machine import WDT
 from uiflow import *
+from machine import WDT 
 
 screen = M5Screen()
 screen.clean_screen()
@@ -105,11 +106,19 @@ try:
     mqtt_user = config['mqtt_user']
 
 except OSError:
-    config = {'day_temp': 20,'night_temp': 14,'timeout_screen': 120000,'time_zone': 2,'wifi_ssid': 'Proximus-Home-385603','mqtt_host': '192.168.129.5','mqtt_user': 'IoT'}
+    config = {
+        'day_temp': 20,
+        'night_temp': 14,
+        'timeout_screen': 120000,
+        'time_zone': 2,
+        'wifi_ssid': 'Proximus-Home-385603',
+        'mqtt_host': '192.168.129.5',
+        'mqtt_user': 'IoT'
+    }
     json.dump(config, open('config.json', 'w'))
 
 nvs.write(str('wifi_pwd'), '6xd3nf2yrbcaan6u')
-nvs.write(str('mqtt_pwd'), 'Bretzel58')
+# nvs.write(str('mqtt_pwd'), 'Bretzel58')
 print('Connect to wifi')
 wifiCfg.doConnect(wifi_ssid, (nvs.read_str('wifi_pwd')))
 print('set up real-time clock')
@@ -130,7 +139,7 @@ def humidity():
 
 def temperature():
     try:
-
+        dht_readinto(DHT_PIN, buf)
         t = ((buf[2] & 0x7F) << 8 | buf[3]) * 0.1
         if buf[2] & 0x80:
             t = -t
@@ -185,7 +194,7 @@ def set_cmd_temp_auto():
     global curr_day_schedule, curr_hrmin, curr_temp, prev_time_exit, curr_period, timeout_on, prev_weekday
     global prev_time_clock, prev_time_regu, prev_time_on, X, prev_time_screen, Y, timeout_screen
     d = (rtc.datetime()[3]) + 1
-    # print("rtc day is " + str(d))
+    # ("rtc day is " + str(d))
     curr_day_schedule = week_schedule[int(d - 1)]
     curr_hrmin = (rtc.datetime()[5]) + (rtc.datetime()[4]) * 100
 
@@ -527,7 +536,7 @@ def cb_mode(topic_data):
     else:
         print('Unknown mode')
         log('Unknown mode')
-
+        
     publish_state()
 
 
@@ -539,7 +548,7 @@ def cb_state(topic_data):
     except:
         print('Cannot publish state!')
         wifiCfg.doConnect(wifi_ssid, (nvs.read_str('wifi_pwd')))
-        m5mqtt = M5mqtt('Thermostat', mqtt_host, 1884, mqtt_user, (nvs.read_str('mqtt_pwd')), 300)
+        m5mqtt = M5mqtt('Thermostat', mqtt_host, 1883, mqtt_user, (nvs.read_str('mqtt_pwd')), 300)
         m5mqtt.start()
         log('Reconnecting!')
 
@@ -548,7 +557,7 @@ def cb_state(topic_data):
 
 # All initiatilizations
 init()
-wdt = WDT(timeout = 360000) # start the system watch dog
+wdt = WDT(timeout = 360000) # start the system watch dog 
 print('Start mqtt client')
 m5mqtt = M5mqtt('Thermostat', mqtt_host, 1883, mqtt_user, (nvs.read_str('mqtt_pwd')), 300)
 print('subscribe to topics')
@@ -582,7 +591,7 @@ while True:
             week_schedule = json.load(open('weekSchedule.json', 'r'))
         except:
             pass
-
+        
         prev_weekday = rtc.datetime()[3]
 
     # publish the temperature every 5 min
@@ -604,7 +613,7 @@ while True:
             m5mqtt.start()
             prev_time_publish = time.ticks_ms() + 290000
             log('Reconnecting!')
-
+            
         wdt.feed()
 
     # Adjust displayed time each second
@@ -652,3 +661,4 @@ while True:
         screen.set_screen_brightness(15)
 
     wait_ms(25)
+
